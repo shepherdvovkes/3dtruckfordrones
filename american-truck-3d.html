@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D American Semi-Truck with Trailer - Drone View</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: linear-gradient(to bottom, #87CEEB 0%, #F0E68C 100%);
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        American Semi-Truck with Cargo Trailer<br>
+        Drone Camera View - Circling Animation<br>
+        The truck is moving forward on the highway
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(0xF0E68C, 100, 1000);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(50, 100, 50);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.left = -100;
+        directionalLight.shadow.camera.right = 100;
+        directionalLight.shadow.camera.top = 100;
+        directionalLight.shadow.camera.bottom = -100;
+        directionalLight.shadow.camera.near = 0.1;
+        directionalLight.shadow.camera.far = 500;
+        scene.add(directionalLight);
+        
+        // Create infinite road
+        const roadSegments = [];
+        const laneMarkings = [];
+        const roadWidth = 30;
+        const roadLength = 200;
+        const numSegments = 20; // Increased for better coverage
+        
+        // Create road segments both ahead and behind starting position
+        for(let i = -5; i < numSegments - 5; i++) {
+            const roadGeometry = new THREE.PlaneGeometry(roadWidth, roadLength);
+            const roadMaterial = new THREE.MeshLambertMaterial({ color: 0x333333 });
+            const road = new THREE.Mesh(roadGeometry, roadMaterial);
+            road.rotation.x = -Math.PI / 2;
+            road.position.set(0, -2, -i * roadLength);
+            road.receiveShadow = true;
+            
+            // Add lane markings
+            const markingGeometry = new THREE.PlaneGeometry(2, 10);
+            const markingMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+            
+            for(let j = 0; j < 10; j++) {
+                const marking = new THREE.Mesh(markingGeometry, markingMaterial);
+                marking.rotation.x = -Math.PI / 2;
+                marking.position.set(0, -1.9, -i * roadLength + j * 20 - 100);
+                scene.add(marking);
+                laneMarkings.push(marking);
+            }
+            
+            roadSegments.push(road);
+            scene.add(road);
+        }
+        
+        // Add ground beside road
+        const groundGeometry = new THREE.PlaneGeometry(2000, 2000);
+        const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x90A955 });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -2.1;
+        ground.receiveShadow = true;
+        scene.add(ground);
+        
+        // Complete truck and trailer group
+        const vehicle = new THREE.Group();
+        
+        // Materials
+        const cabMaterial = new THREE.MeshPhongMaterial({ color: 0x1E3A8A });
+        const chromeMaterial = new THREE.MeshPhongMaterial({ color: 0xC0C0C0, shininess: 100 });
+        const glassMaterial = new THREE.MeshPhongMaterial({ color: 0x87CEEB, opacity: 0.6, transparent: true });
+        const tireMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a1a });
+        const redMaterial = new THREE.MeshPhongMaterial({ color: 0xFF0000, emissive: 0xFF0000, emissiveIntensity: 0.3 });
+        const trailerMaterial = new THREE.MeshPhongMaterial({ color: 0xE0E0E0 });
+        
+        // Build truck cab
+        const truck = new THREE.Group();
+        
+        // Long nose (hood)
+        const hoodGeometry = new THREE.BoxGeometry(4, 2, 6);
+        const hood = new THREE.Mesh(hoodGeometry, cabMaterial);
+        hood.position.set(0, 1.5, 5);
+        hood.castShadow = true;
+        truck.add(hood);
+        
+        // Hood top detail
+        const hoodTopGeometry = new THREE.BoxGeometry(3.8, 0.3, 5.8);
+        const hoodTop = new THREE.Mesh(hoodTopGeometry, cabMaterial);
+        hoodTop.position.set(0, 2.65, 5);
+        truck.add(hoodTop);
+        
+        // Engine grille
+        const grilleGeometry = new THREE.BoxGeometry(3.5, 1.8, 0.3);
+        const grille = new THREE.Mesh(grilleGeometry, chromeMaterial);
+        grille.position.set(0, 1.5, 8.2);
+        truck.add(grille);
+        
+        // Grille bars
+        for(let i = -1.5; i <= 1.5; i += 0.3) {
+            const barGeometry = new THREE.BoxGeometry(0.1, 1.6, 0.4);
+            const bar = new THREE.Mesh(barGeometry, new THREE.MeshPhongMaterial({ color: 0x666666 }));
+            bar.position.set(i, 1.5, 8.3);
+            truck.add(bar);
+        }
+        
+        // Main cab
+        const cabGeometry = new THREE.BoxGeometry(4, 4, 4);
+        const cab = new THREE.Mesh(cabGeometry, cabMaterial);
+        cab.position.set(0, 3, 0);
+        cab.castShadow = true;
+        truck.add(cab);
+        
+        // Sleeper cab extension
+        const sleeperGeometry = new THREE.BoxGeometry(4, 3.5, 3);
+        const sleeper = new THREE.Mesh(sleeperGeometry, cabMaterial);
+        sleeper.position.set(0, 2.75, -3);
+        sleeper.castShadow = true;
+        truck.add(sleeper);
+        
+        // Windshield
+        const windshieldGeometry = new THREE.BoxGeometry(3.5, 2, 0.1);
+        const windshield = new THREE.Mesh(windshieldGeometry, glassMaterial);
+        windshield.position.set(0, 3.5, 2.1);
+        truck.add(windshield);
+        
+        // Side windows
+        const sideWindowGeometry = new THREE.BoxGeometry(0.1, 1.5, 2);
+        const leftWindow = new THREE.Mesh(sideWindowGeometry, glassMaterial);
+        leftWindow.position.set(-2.05, 3.5, 0.5);
+        truck.add(leftWindow);
+        
+        const rightWindow = new THREE.Mesh(sideWindowGeometry, glassMaterial);
+        rightWindow.position.set(2.05, 3.5, 0.5);
+        truck.add(rightWindow);
+        
+        // Exhaust stacks
+        const exhaustGeometry = new THREE.CylinderGeometry(0.15, 0.15, 4);
+        const exhaustMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 });
+        
+        const leftExhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+        leftExhaust.position.set(-2.2, 4, -1);
+        truck.add(leftExhaust);
+        
+        const rightExhaust = new THREE.Mesh(exhaustGeometry, exhaustMaterial);
+        rightExhaust.position.set(2.2, 4, -1);
+        truck.add(rightExhaust);
+        
+        // Headlights
+        const headlightGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+        const headlightMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xFFFF00, 
+            emissive: 0xFFFF00, 
+            emissiveIntensity: 0.5 
+        });
+        
+        const leftHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+        leftHeadlight.position.set(-1.5, 1, 8.3);
+        truck.add(leftHeadlight);
+        
+        const rightHeadlight = new THREE.Mesh(headlightGeometry, headlightMaterial);
+        rightHeadlight.position.set(1.5, 1, 8.3);
+        truck.add(rightHeadlight);
+        
+        // Wheels function
+        function createWheel() {
+            const wheel = new THREE.Group();
+            
+            const tireGeometry = new THREE.CylinderGeometry(1, 1, 0.8, 32);
+            const tire = new THREE.Mesh(tireGeometry, tireMaterial);
+            tire.rotation.z = Math.PI / 2;
+            tire.castShadow = true;
+            wheel.add(tire);
+            
+            const rimGeometry = new THREE.CylinderGeometry(0.6, 0.6, 0.85, 16);
+            const rim = new THREE.Mesh(rimGeometry, chromeMaterial);
+            rim.rotation.z = Math.PI / 2;
+            wheel.add(rim);
+            
+            return wheel;
+        }
+        
+        // Truck wheels
+        const truckWheels = [];
+        
+        const frontLeftWheel = createWheel();
+        frontLeftWheel.position.set(-2, -1, 6);
+        truck.add(frontLeftWheel);
+        truckWheels.push(frontLeftWheel);
+        
+        const frontRightWheel = createWheel();
+        frontRightWheel.position.set(2, -1, 6);
+        truck.add(frontRightWheel);
+        truckWheels.push(frontRightWheel);
+        
+        const rearLeftWheel1 = createWheel();
+        rearLeftWheel1.position.set(-2.4, -1, -2);
+        truck.add(rearLeftWheel1);
+        truckWheels.push(rearLeftWheel1);
+        
+        const rearLeftWheel2 = createWheel();
+        rearLeftWheel2.position.set(-1.6, -1, -2);
+        truck.add(rearLeftWheel2);
+        truckWheels.push(rearLeftWheel2);
+        
+        const rearRightWheel1 = createWheel();
+        rearRightWheel1.position.set(2.4, -1, -2);
+        truck.add(rearRightWheel1);
+        truckWheels.push(rearRightWheel1);
+        
+        const rearRightWheel2 = createWheel();
+        rearRightWheel2.position.set(1.6, -1, -2);
+        truck.add(rearRightWheel2);
+        truckWheels.push(rearRightWheel2);
+        
+        // Fifth wheel coupling
+        const fifthWheelGeometry = new THREE.CylinderGeometry(1, 1, 0.3, 16);
+        const fifthWheel = new THREE.Mesh(fifthWheelGeometry, new THREE.MeshPhongMaterial({ color: 0x333333 }));
+        fifthWheel.position.set(0, 0.8, -4);
+        truck.add(fifthWheel);
+        
+        vehicle.add(truck);
+        
+        // CREATE CARGO TRAILER
+        const trailer = new THREE.Group();
+        
+        // Main trailer body
+        const trailerBodyGeometry = new THREE.BoxGeometry(4.5, 5, 20);
+        const trailerBody = new THREE.Mesh(trailerBodyGeometry, trailerMaterial);
+        trailerBody.position.set(0, 3, -18);
+        trailerBody.castShadow = true;
+        trailer.add(trailerBody);
+        
+        // Trailer details - side panels
+        const panelMaterial = new THREE.MeshPhongMaterial({ color: 0xCCCCCC });
+        for(let i = 0; i < 4; i++) {
+            const panelGeometry = new THREE.BoxGeometry(4.6, 4.8, 0.1);
+            const panel = new THREE.Mesh(panelGeometry, panelMaterial);
+            panel.position.set(0, 3, -10 - i * 5);
+            trailer.add(panel);
+        }
+        
+        // Trailer roof
+        const trailerRoofGeometry = new THREE.BoxGeometry(4.7, 0.2, 20.2);
+        const trailerRoof = new THREE.Mesh(trailerRoofGeometry, new THREE.MeshPhongMaterial({ color: 0xAAAAAA }));
+        trailerRoof.position.set(0, 5.6, -18);
+        trailer.add(trailerRoof);
+        
+        // Trailer rear doors
+        const doorGeometry = new THREE.BoxGeometry(2.2, 4.8, 0.2);
+        const leftDoor = new THREE.Mesh(doorGeometry, panelMaterial);
+        leftDoor.position.set(-1.125, 3, -28.1);
+        trailer.add(leftDoor);
+        
+        const rightDoor = new THREE.Mesh(doorGeometry, panelMaterial);
+        rightDoor.position.set(1.125, 3, -28.1);
+        trailer.add(rightDoor);
+        
+        // Door handles
+        const handleGeometry = new THREE.BoxGeometry(0.1, 2, 0.3);
+        const handleMaterial = new THREE.MeshPhongMaterial({ color: 0x666666 });
+        const leftHandle = new THREE.Mesh(handleGeometry, handleMaterial);
+        leftHandle.position.set(-0.05, 3, -28.2);
+        trailer.add(leftHandle);
+        
+        const rightHandle = new THREE.Mesh(handleGeometry, handleMaterial);
+        rightHandle.position.set(0.05, 3, -28.2);
+        trailer.add(rightHandle);
+        
+        // Trailer wheels
+        const trailerWheels = [];
+        
+        // First axle
+        const trailerWheel1L = createWheel();
+        trailerWheel1L.position.set(-2.4, -1, -20);
+        trailer.add(trailerWheel1L);
+        trailerWheels.push(trailerWheel1L);
+        
+        const trailerWheel1L2 = createWheel();
+        trailerWheel1L2.position.set(-1.6, -1, -20);
+        trailer.add(trailerWheel1L2);
+        trailerWheels.push(trailerWheel1L2);
+        
+        const trailerWheel1R = createWheel();
+        trailerWheel1R.position.set(2.4, -1, -20);
+        trailer.add(trailerWheel1R);
+        trailerWheels.push(trailerWheel1R);
+        
+        const trailerWheel1R2 = createWheel();
+        trailerWheel1R2.position.set(1.6, -1, -20);
+        trailer.add(trailerWheel1R2);
+        trailerWheels.push(trailerWheel1R2);
+        
+        // Second axle
+        const trailerWheel2L = createWheel();
+        trailerWheel2L.position.set(-2.4, -1, -23);
+        trailer.add(trailerWheel2L);
+        trailerWheels.push(trailerWheel2L);
+        
+        const trailerWheel2L2 = createWheel();
+        trailerWheel2L2.position.set(-1.6, -1, -23);
+        trailer.add(trailerWheel2L2);
+        trailerWheels.push(trailerWheel2L2);
+        
+        const trailerWheel2R = createWheel();
+        trailerWheel2R.position.set(2.4, -1, -23);
+        trailer.add(trailerWheel2R);
+        trailerWheels.push(trailerWheel2R);
+        
+        const trailerWheel2R2 = createWheel();
+        trailerWheel2R2.position.set(1.6, -1, -23);
+        trailer.add(trailerWheel2R2);
+        trailerWheels.push(trailerWheel2R2);
+        
+        // Trailer lights
+        const tailLightGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.1);
+        const tailLightMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xFF0000, 
+            emissive: 0xFF0000, 
+            emissiveIntensity: 0.3 
+        });
+        
+        const leftTailLight = new THREE.Mesh(tailLightGeometry, tailLightMaterial);
+        leftTailLight.position.set(-2, 1.5, -28.15);
+        trailer.add(leftTailLight);
+        
+        const rightTailLight = new THREE.Mesh(tailLightGeometry, tailLightMaterial);
+        rightTailLight.position.set(2, 1.5, -28.15);
+        trailer.add(rightTailLight);
+        
+        // Company branding on trailer
+        const logoCanvas = document.createElement('canvas');
+        logoCanvas.width = 512;
+        logoCanvas.height = 128;
+        const ctx = logoCanvas.getContext('2d');
+        ctx.fillStyle = '#E0E0E0';
+        ctx.fillRect(0, 0, 512, 128);
+        ctx.fillStyle = '#1E3A8A';
+        ctx.font = 'bold 48px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('AMERICAN CARGO', 256, 75);
+        
+        const logoTexture = new THREE.CanvasTexture(logoCanvas);
+        const logoMaterial = new THREE.MeshBasicMaterial({ map: logoTexture });
+        const logoGeometry = new THREE.PlaneGeometry(8, 2);
+        
+        const leftLogo = new THREE.Mesh(logoGeometry, logoMaterial);
+        leftLogo.rotation.y = -Math.PI / 2;
+        leftLogo.position.set(-2.26, 3.5, -18);
+        trailer.add(leftLogo);
+        
+        const rightLogo = new THREE.Mesh(logoGeometry, logoMaterial);
+        rightLogo.rotation.y = Math.PI / 2;
+        rightLogo.position.set(2.26, 3.5, -18);
+        trailer.add(rightLogo);
+        
+        vehicle.add(trailer);
+        scene.add(vehicle);
+        
+        // Position vehicle on the road surface
+        vehicle.position.y = 0; // This puts the wheels right on the road (wheels have radius 1)
+        
+        // Animation variables
+        let time = 0;
+        const truckSpeed = 0.5;
+        const droneRadius = 40;
+        const droneHeight = 25;
+        const droneSpeed = 0.002;
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 1;
+            
+            // Move vehicle forward
+            vehicle.position.z = (time * truckSpeed) % (roadLength * 2);
+            
+            // Update road segments and lane markings for infinite road effect
+            // The drone camera can see in a circle, so we need road coverage in all directions
+            const droneViewDistance = droneRadius + 100; // Drone radius plus extra coverage
+            
+            roadSegments.forEach((segment) => {
+                const distFromVehicle = segment.position.z - vehicle.position.z;
+                
+                // If segment is way behind the visible area
+                if(distFromVehicle < -droneViewDistance - roadLength) {
+                    // Find the furthest segment ahead
+                    let maxZ = -Infinity;
+                    roadSegments.forEach(s => {
+                        if(s.position.z > maxZ) maxZ = s.position.z;
+                    });
+                    // Place this segment ahead if we need more coverage there
+                    if(maxZ < vehicle.position.z + droneViewDistance) {
+                        segment.position.z = maxZ + roadLength;
+                    }
+                }
+                
+                // If segment is way ahead of the visible area
+                if(distFromVehicle > droneViewDistance + roadLength) {
+                    // Find the nearest segment behind
+                    let minZ = Infinity;
+                    roadSegments.forEach(s => {
+                        if(s.position.z < minZ) minZ = s.position.z;
+                    });
+                    // Place this segment behind if we need more coverage there
+                    if(minZ > vehicle.position.z - droneViewDistance) {
+                        segment.position.z = minZ - roadLength;
+                    }
+                }
+            });
+            
+            // Update lane markings with same logic
+            laneMarkings.forEach((marking) => {
+                const distFromVehicle = marking.position.z - vehicle.position.z;
+                
+                if(distFromVehicle < -droneViewDistance - 20) {
+                    let maxZ = -Infinity;
+                    laneMarkings.forEach(m => {
+                        if(m.position.z > maxZ) maxZ = m.position.z;
+                    });
+                    if(maxZ < vehicle.position.z + droneViewDistance) {
+                        marking.position.z = maxZ + 20;
+                    }
+                }
+                
+                if(distFromVehicle > droneViewDistance + 20) {
+                    let minZ = Infinity;
+                    laneMarkings.forEach(m => {
+                        if(m.position.z < minZ) minZ = m.position.z;
+                    });
+                    if(minZ > vehicle.position.z - droneViewDistance) {
+                        marking.position.z = minZ - 20;
+                    }
+                }
+            });
+            
+            // Rotate all wheels
+            const wheelRotation = time * 0.05;
+            [...truckWheels, ...trailerWheels].forEach(wheel => {
+                wheel.rotation.x = wheelRotation;
+            });
+            
+            // Drone camera movement - circular path around vehicle
+            const droneAngle = time * droneSpeed;
+            const cameraX = vehicle.position.x + Math.cos(droneAngle) * droneRadius;
+            const cameraZ = vehicle.position.z + Math.sin(droneAngle) * droneRadius;
+            const cameraY = droneHeight + Math.sin(droneAngle * 2) * 5; // Slight vertical movement
+            
+            camera.position.set(cameraX, cameraY, cameraZ);
+            
+            // Always look at the vehicle
+            camera.lookAt(vehicle.position.x, vehicle.position.y + 3, vehicle.position.z - 10);
+            
+            // Add slight truck bounce for realism (but keep it on the road)
+            vehicle.position.y = 0 + Math.sin(time * 0.1) * 0.05;
+            vehicle.rotation.z = Math.sin(time * 0.15) * 0.002;
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        animate();
+    </script>
+</body>
+</html>
