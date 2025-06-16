@@ -8,3 +8,11 @@ This project showcases a 3D model of an American semi-truck and trailer using th
 
 1. Ensure your computer is connected to the internet so the Three.js CDN can be loaded.
 2. Open `american-truck-3d.html` in a modern web browser.
+
+## Testing
+
+Run the unit tests with [pytest](https://pytest.org):
+
+```bash
+pytest
+```
