@@ -95,23 +95,31 @@
         
         // Add ground beside road
         const groundGeometry = new THREE.PlaneGeometry(2000, 2000);
-        const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x90A955 });
+        const groundMaterial = new THREE.MeshLambertMaterial({ color: 0x5A8F3D });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -2.1;
         ground.receiveShadow = true;
         scene.add(ground);
+
+        // Simple roadside building
+        const buildingGeometry = new THREE.BoxGeometry(20, 10, 20);
+        const buildingMaterial = new THREE.MeshLambertMaterial({ color: 0x8B4513 });
+        const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+        building.position.set(-50, 5, -100);
+        building.receiveShadow = true;
+        scene.add(building);
         
         // Complete truck and trailer group
         const vehicle = new THREE.Group();
         
         // Materials
-        const cabMaterial = new THREE.MeshPhongMaterial({ color: 0x1E3A8A });
+        const cabMaterial = new THREE.MeshPhongMaterial({ color: 0x2B7A0B });
         const chromeMaterial = new THREE.MeshPhongMaterial({ color: 0xC0C0C0, shininess: 100 });
         const glassMaterial = new THREE.MeshPhongMaterial({ color: 0x87CEEB, opacity: 0.6, transparent: true });
         const tireMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a1a });
         const redMaterial = new THREE.MeshPhongMaterial({ color: 0xFF0000, emissive: 0xFF0000, emissiveIntensity: 0.3 });
-        const trailerMaterial = new THREE.MeshPhongMaterial({ color: 0xE0E0E0 });
+        const trailerMaterial = new THREE.MeshPhongMaterial({ color: 0xCCCCCC });
         
         // Build truck cab
         const truck = new THREE.Group();
@@ -403,6 +411,7 @@
         let time = 0;
         const truckSpeed = 30; // units per second
         const droneRadius = 40;
+        const droneRadiusZ = 60;
         const droneHeight = 25;
         const droneSpeed = 0.12; // radians per second
         const wheelRotationSpeed = 3; // radians per second
@@ -419,7 +428,7 @@
             
             // Update road segments and lane markings for infinite road effect
             // The drone camera can see in a circle, so we need road coverage in all directions
-            const droneViewDistance = droneRadius + 100; // Drone radius plus extra coverage
+            const droneViewDistance = Math.max(droneRadius, droneRadiusZ) + 100; // Drone radius plus extra coverage
             
             roadSegments.forEach((segment) => {
                 const distFromVehicle = segment.position.z - vehicle.position.z;
@@ -481,10 +490,10 @@
                 wheel.rotation.x += wheelRotationSpeed * delta;
             });
             
-            // Drone camera movement - circular path around vehicle
+            // Drone camera movement - elliptical path around vehicle
             const droneAngle = time * droneSpeed;
             const cameraX = vehicle.position.x + Math.cos(droneAngle) * droneRadius;
-            const cameraZ = vehicle.position.z + Math.sin(droneAngle) * droneRadius;
+            const cameraZ = vehicle.position.z + Math.sin(droneAngle) * droneRadiusZ;
             const cameraY = droneHeight + Math.sin(droneAngle * 2) * 5; // Slight vertical movement
             
             camera.position.set(cameraX, cameraY, cameraZ);
