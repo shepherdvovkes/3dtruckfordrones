@@ -405,14 +405,16 @@
         const droneRadius = 40;
         const droneHeight = 25;
         const droneSpeed = 0.002;
+        const clock = new THREE.Clock();
         
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
-            time += 1;
-            
+            const delta = clock.getDelta();
+            time += delta * 60; // Normalize time to 60fps
+
             // Move vehicle forward
-            vehicle.position.z = (time * truckSpeed) % (roadLength * 2);
+            vehicle.position.z += truckSpeed * delta * 60;
             
             // Update road segments and lane markings for infinite road effect
             // The drone camera can see in a circle, so we need road coverage in all directions
