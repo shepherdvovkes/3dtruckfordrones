@@ -401,20 +401,21 @@
         
         // Animation variables
         let time = 0;
-        const truckSpeed = 0.5;
+        const truckSpeed = 30; // units per second
         const droneRadius = 40;
         const droneHeight = 25;
-        const droneSpeed = 0.002;
+        const droneSpeed = 0.12; // radians per second
+        const wheelRotationSpeed = 3; // radians per second
         const clock = new THREE.Clock();
         
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
-            time += delta * 60; // Normalize time to 60fps
+            time += delta;
 
             // Move vehicle forward
-            vehicle.position.z += truckSpeed * delta * 60;
+            vehicle.position.z += truckSpeed * delta;
             
             // Update road segments and lane markings for infinite road effect
             // The drone camera can see in a circle, so we need road coverage in all directions
@@ -475,10 +476,9 @@
                 }
             });
             
-            // Rotate all wheels
-            const wheelRotation = time * 0.05;
+            // Rotate all wheels based on delta time
             [...truckWheels, ...trailerWheels].forEach(wheel => {
-                wheel.rotation.x = wheelRotation;
+                wheel.rotation.x += wheelRotationSpeed * delta;
             });
             
             // Drone camera movement - circular path around vehicle
