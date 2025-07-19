@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Захват аудио с WB Cable и транскрипция</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .control-group label {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .start-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        .stop-btn {
+            background: #f44336;
+            color: white;
+        }
+        .start-btn:disabled, .stop-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        input[type="range"] {
+            width: 150px;
+        }
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        select {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.active {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.inactive {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .level-meter {
+            height: 20px;
+            background: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+            position: relative;
+        }
+        .level-bar {
+            height: 100%;
+            background: linear-gradient(to right, #4CAF50, #ffeb3b, #f44336);
+            width: 0%;
+            transition: width 0.1s;
+        }
+        .level-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+        }
+        .transcription {
+            margin-top: 20px;
+            min-height: 200px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            background: #fafafa;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .transcription h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .device-info {
+            background: #e7f3ff;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Захват аудио с WB Cable и транскрипция</h1>
+        
+        <div class="device-info" id="deviceInfo">
+            Загрузка информации об устройствах...
+        </div>
+
+        <div class="settings-grid">
+            <div class="control-group">
+                <label for="audioDevice">Устройство ввода:</label>
+                <select id="audioDevice">
+                    <option value="">Выберите устройство...</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="gainControl">Усиление сигнала:</label>
+                <input type="range" id="gainControl" min="0.1" max="10" value="3" step="0.1">
+                <span id="gainValue">3.0x</span>
+            </div>
+
+            <div class="control-group">
+                <label for="noiseGate">Порог шума:</label>
+                <input type="range" id="noiseGate" min="0" max="100" value="10" step="1">
+                <span id="noiseGateValue">10%</span>
+            </div>
+
+            <div class="control-group">
+                <label for="sampleRate">Частота дискретизации:</label>
+                <select id="sampleRate">
+                    <option value="44100">44.1 kHz</option>
+                    <option value="48000" selected>48 kHz</option>
+                    <option value="96000">96 kHz</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" class="start-btn">Начать захват</button>
+            <button id="stopBtn" class="stop-btn" disabled>Остановить</button>
+            <button id="testBtn">Тест сигнала</button>
+        </div>
+
+        <div id="status" class="status inactive">
+            Статус: Остановлено
+        </div>
+
+        <div class="control-group">
+            <label>Уровень сигнала:</label>
+            <div class="level-meter">
+                <div class="level-bar" id="levelBar"></div>
+                <div class="level-text" id="levelText">0%</div>
+            </div>
+        </div>
+
+        <div class="transcription">
+            <h3>Транскрипция:</h3>
+            <div id="transcriptionText">Транскрипция будет отображаться здесь...</div>
+        </div>
+    </div>
+
+    <script src="advanced-audio-processor.js"></script>
+    <script>
+        class AudioCaptureManager {
+            constructor() {
+                this.mediaStream = null;
+                this.audioContext = null;
+                this.analyser = null;
+                this.gainNode = null;
+                this.recognition = null;
+                this.isRecording = false;
+                this.levelMeter = null;
+                this.audioProcessor = null;
+                this.transcriptionManager = null;
+                
+                this.initializeElements();
+                this.setupEventListeners();
+                this.loadAudioDevices();
+                this.initSpeechRecognition();
+                this.addAdvancedControls();
+            }
+
+            initializeElements() {
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.testBtn = document.getElementById('testBtn');
+                this.status = document.getElementById('status');
+                this.levelBar = document.getElementById('levelBar');
+                this.levelText = document.getElementById('levelText');
+                this.gainControl = document.getElementById('gainControl');
+                this.gainValue = document.getElementById('gainValue');
+                this.noiseGate = document.getElementById('noiseGate');
+                this.noiseGateValue = document.getElementById('noiseGateValue');
+                this.audioDevice = document.getElementById('audioDevice');
+                this.sampleRate = document.getElementById('sampleRate');
+                this.transcriptionText = document.getElementById('transcriptionText');
+                this.deviceInfo = document.getElementById('deviceInfo');
+            }
+
+            setupEventListeners() {
+                this.startBtn.addEventListener('click', () => this.startCapture());
+                this.stopBtn.addEventListener('click', () => this.stopCapture());
+                this.testBtn.addEventListener('click', () => this.testSignal());
+                
+                this.gainControl.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    this.gainValue.textContent = value.toFixed(1) + 'x';
+                    if (this.audioProcessor) {
+                        this.audioProcessor.setMainGain(value);
+                    }
+                });
+
+                this.noiseGate.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    this.noiseGateValue.textContent = value + '%';
+                });
+            }
+
+            async loadAudioDevices() {
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const audioInputs = devices.filter(device => device.kind === 'audioinput');
+                    
+                    this.audioDevice.innerHTML = '<option value="">Выберите устройство...</option>';
+                    
+                    audioInputs.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.textContent = device.label || `Микрофон ${device.deviceId.slice(0, 8)}`;
+                        if (device.label.toLowerCase().includes('wb') || 
+                            device.label.toLowerCase().includes('cable')) {
+                            option.textContent += ' (WB Cable)';
+                            option.selected = true;
+                        }
+                        this.audioDevice.appendChild(option);
+                    });
+
+                    this.updateDeviceInfo(audioInputs);
+                } catch (error) {
+                    console.error('Ошибка загрузки устройств:', error);
+                    this.deviceInfo.textContent = 'Ошибка загрузки устройств: ' + error.message;
+                }
+            }
+
+            updateDeviceInfo(devices) {
+                const wbDevice = devices.find(d => 
+                    d.label.toLowerCase().includes('wb') || 
+                    d.label.toLowerCase().includes('cable')
+                );
+                
+                if (wbDevice) {
+                    this.deviceInfo.innerHTML = `
+                        <strong>Найдено WB Cable устройство:</strong><br>
+                        ${wbDevice.label}<br>
+                        ID: ${wbDevice.deviceId}
+                    `;
+                } else {
+                    this.deviceInfo.innerHTML = `
+                        <strong>Доступные аудио устройства:</strong><br>
+                        ${devices.map(d => d.label || 'Неизвестное устройство').join('<br>')}
+                    `;
+                }
+            }
+
+            initSpeechRecognition() {
+                // Инициализируем улучшенный менеджер транскрипции
+                this.transcriptionManager = new EnhancedTranscriptionManager();
+                
+                // Устанавливаем callback для обработки результатов
+                this.transcriptionCallback = (result) => {
+                    if (result.final) {
+                        this.transcriptionText.textContent += result.final + '\n';
+                    }
+                    if (result.interim) {
+                        const lines = this.transcriptionText.textContent.split('\n');
+                        lines[lines.length - 1] = '[' + result.interim + ']';
+                        this.transcriptionText.textContent = lines.join('\n');
+                    }
+                    this.transcriptionText.scrollTop = this.transcriptionText.scrollHeight;
+                    
+                    // Отображаем уверенность
+                    if (result.confidence) {
+                        console.log('Уверенность транскрипции:', Math.round(result.confidence * 100) + '%');
+                    }
+                };
+            }
+
+            async startCapture() {
+                try {
+                    const constraints = {
+                        audio: {
+                            deviceId: this.audioDevice.value ? { exact: this.audioDevice.value } : undefined,
+                            sampleRate: parseInt(this.sampleRate.value),
+                            channelCount: 2,
+                            echoCancellation: false,
+                            noiseSuppression: false,
+                            autoGainControl: false
+                        }
+                    };
+
+                    this.mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                        sampleRate: parseInt(this.sampleRate.value)
+                    });
+
+                    const source = this.audioContext.createMediaStreamSource(this.mediaStream);
+                    
+                    // Инициализируем продвинутый аудио-процессор
+                    this.audioProcessor = new AdvancedAudioProcessor(this.audioContext);
+                    
+                    // Подключаем источник к процессору
+                    this.audioProcessor.connectInput(source);
+                    
+                    // Получаем анализатор от процессора
+                    this.analyser = this.audioProcessor.getAnalyser();
+                    
+                    // Если сигнал слабый, применяем автоматические настройки
+                    if (parseFloat(this.gainControl.value) > 5) {
+                        this.audioProcessor.autoConfigureForWeakSignal();
+                        this.transcriptionText.textContent += '[Применены настройки для слабого сигнала]\n';
+                    }
+
+                    this.isRecording = true;
+                    this.startBtn.disabled = true;
+                    this.stopBtn.disabled = false;
+                    this.updateStatus('active', 'Активно - захват аудио с продвинутой обработкой');
+
+                    // Запускаем отображение уровня
+                    this.startLevelMeter();
+
+                    // Запускаем улучшенную транскрипцию
+                    if (this.transcriptionManager) {
+                        this.transcriptionManager.start(this.transcriptionCallback);
+                    }
+
+                    // Запускаем автоматический анализ качества
+                    this.startQualityMonitoring();
+
+                    console.log('Захват аудио начат с продвинутой обработкой');
+                    console.log('Частота дискретизации:', this.audioContext.sampleRate);
+
+                } catch (error) {
+                    console.error('Ошибка захвата аудио:', error);
+                    this.updateStatus('inactive', 'Ошибка: ' + error.message);
+                }
+            }
+
+            stopCapture() {
+                this.isRecording = false;
+                
+                if (this.mediaStream) {
+                    this.mediaStream.getTracks().forEach(track => track.stop());
+                    this.mediaStream = null;
+                }
+                
+                if (this.audioContext) {
+                    this.audioContext.close();
+                    this.audioContext = null;
+                }
+
+                if (this.transcriptionManager) {
+                    this.transcriptionManager.stop();
+                }
+
+                if (this.qualityMonitoringInterval) {
+                    clearInterval(this.qualityMonitoringInterval);
+                }
+
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                this.updateStatus('inactive', 'Остановлено');
+                
+                // Сбрасываем индикатор уровня
+                this.levelBar.style.width = '0%';
+                this.levelText.textContent = '0%';
+            }
+
+
+
+            testSignal() {
+                if (!this.isRecording) {
+                    alert('Сначала запустите захват аудио');
+                    return;
+                }
+
+                // Генерируем тестовый тон
+                const oscillator = this.audioContext.createOscillator();
+                const testGain = this.audioContext.createGain();
+                
+                oscillator.frequency.value = 1000; // 1 кГц
+                testGain.gain.value = 0.1;
+                
+                oscillator.connect(testGain);
+                testGain.connect(this.audioContext.destination);
+                
+                oscillator.start();
+                setTimeout(() => oscillator.stop(), 1000); // 1 секунда
+
+                this.transcriptionText.textContent += '\n[Тест сигнала 1кГц выполнен]\n';
+            }
+
+            updateStatus(type, message) {
+                this.status.className = `status ${type}`;
+                this.status.textContent = `Статус: ${message}`;
+            }
+
+            addAdvancedControls() {
+                // Добавляем дополнительные элементы управления
+                const controlsContainer = document.querySelector('.settings-grid');
+                
+                // Кнопка автонастройки
+                const autoTuneGroup = document.createElement('div');
+                autoTuneGroup.className = 'control-group';
+                autoTuneGroup.innerHTML = `
+                    <label>Автонастройка:</label>
+                    <button id="autoTuneBtn" style="background: #2196F3; color: white; padding: 8px 15px; border: none; border-radius: 3px; cursor: pointer;">
+                        Автонастройка для слабого сигнала
+                    </button>
+                `;
+                controlsContainer.appendChild(autoTuneGroup);
+
+                // Индикатор качества
+                const qualityGroup = document.createElement('div');
+                qualityGroup.className = 'control-group';
+                qualityGroup.innerHTML = `
+                    <label>Качество сигнала:</label>
+                    <div id="qualityIndicator" style="padding: 5px 10px; border-radius: 3px; background: #f0f0f0; font-weight: bold;">
+                        Не определено
+                    </div>
+                `;
+                controlsContainer.appendChild(qualityGroup);
+
+                // Обработчики событий для новых элементов
+                document.getElementById('autoTuneBtn').addEventListener('click', () => {
+                    if (this.audioProcessor) {
+                        this.audioProcessor.autoConfigureForWeakSignal();
+                        this.transcriptionText.textContent += '[Применена автонастройка для слабого сигнала]\n';
+                    } else {
+                        alert('Сначала запустите захват аудио');
+                    }
+                });
+            }
+
+            startQualityMonitoring() {
+                if (!this.audioProcessor) return;
+
+                this.qualityMonitoringInterval = setInterval(() => {
+                    const quality = this.audioProcessor.analyzeSignalQuality();
+                    this.updateQualityIndicator(quality);
+                    
+                    // Автоматическая коррекция при плохом качестве
+                    if (quality.quality === 'Плохое') {
+                        console.log('Обнаружено плохое качество сигнала, применяем автокоррекцию');
+                        this.audioProcessor.autoAdjustSettings();
+                    }
+                }, 5000); // Проверяем каждые 5 секунд
+            }
+
+            updateQualityIndicator(quality) {
+                const indicator = document.getElementById('qualityIndicator');
+                if (!indicator) return;
+
+                indicator.textContent = `${quality.quality} (${Math.round(quality.rmsLevel)}dB)`;
+                
+                // Меняем цвет в зависимости от качества
+                switch (quality.quality) {
+                    case 'Отличное':
+                        indicator.style.background = '#d4edda';
+                        indicator.style.color = '#155724';
+                        break;
+                    case 'Хорошее':
+                        indicator.style.background = '#d1ecf1';
+                        indicator.style.color = '#0c5460';
+                        break;
+                    case 'Удовлетворительное':
+                        indicator.style.background = '#fff3cd';
+                        indicator.style.color = '#856404';
+                        break;
+                    case 'Плохое':
+                        indicator.style.background = '#f8d7da';
+                        indicator.style.color = '#721c24';
+                        break;
+                }
+            }
+
+            startLevelMeter() {
+                if (!this.isRecording || !this.analyser) return;
+
+                const updateLevel = () => {
+                    if (!this.isRecording) return;
+
+                    let level;
+                    if (this.audioProcessor) {
+                        level = this.audioProcessor.getSignalLevel();
+                    } else {
+                        // Fallback для базового анализатора
+                        const bufferLength = this.analyser.frequencyBinCount;
+                        const dataArray = new Uint8Array(bufferLength);
+                        this.analyser.getByteFrequencyData(dataArray);
+                        
+                        let sum = 0;
+                        for (let i = 0; i < bufferLength; i++) {
+                            sum += dataArray[i] * dataArray[i];
+                        }
+                        const rms = Math.sqrt(sum / bufferLength);
+                        level = (rms / 255) * 100;
+                    }
+
+                    // Применяем порог шума
+                    const noiseThreshold = parseInt(this.noiseGate.value);
+                    const adjustedLevel = level > noiseThreshold ? level : 0;
+
+                    this.levelBar.style.width = Math.min(adjustedLevel, 100) + '%';
+                    this.levelText.textContent = Math.round(adjustedLevel) + '%';
+
+                    requestAnimationFrame(updateLevel);
+                };
+
+                updateLevel();
+            }
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            new AudioCaptureManager();
+        });
+    </script>
+</body>
+</html>
